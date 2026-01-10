@@ -106,4 +106,38 @@ export class AuthService {
       throw new InternalServerErrorException('Failed to update user');
     }
   }
+  async changePassword(
+    userId: number,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      const isCurrentPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.password,
+      );
+
+      if (!isCurrentPasswordValid) {
+        throw new BadRequestException('Current password is incorrect');
+      }
+
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      await this.prismaService.user.update({
+        where: { id: userId },
+        data: { password: hashedNewPassword },
+      });
+    } catch (error) {
+      handlePrismaError(error);
+      throw error;
+    }
+  }
 }

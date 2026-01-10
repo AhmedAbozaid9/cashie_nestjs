@@ -5,6 +5,8 @@ import { SignupDto } from './dto/signup.dto';
 import { SigninDto } from './dto/signin.dto';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { Public } from 'src/common/decorators/public.decorator';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -30,8 +32,20 @@ export class AuthController {
   @Put('me')
   updateCurrentUser(
     @GetUser('id') userId: number,
-    @Body() dto: Partial<SignupDto>,
+    @Body() dto: UpdateUserDto,
   ): Promise<UserWithoutPassword> {
     return this.authService.updateCurrentUser(userId, dto);
+  }
+
+  @Post('change-password')
+  changePassword(
+    @GetUser('id') userId: number,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<void> {
+    return this.authService.changePassword(
+      userId,
+      dto.current_password,
+      dto.password,
+    );
   }
 }
