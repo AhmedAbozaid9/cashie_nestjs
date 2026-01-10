@@ -7,50 +7,52 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Request } from 'express';
-import type { User } from '../../generated/prisma/client';
+import { Reflector } from '@nestjs/core';
+import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator';
 
 interface JwtPayload {
   userId: number;
+  email: string;
 }
-
-type SafeUser = Pick<User, 'id' | 'email' | 'name' | 'plan'>;
-type RequestWithUser = Request & { user: SafeUser };
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<RequestWithUser>();
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    const request = context
+      .switchToHttp()
+      .getRequest<Request & { user?: any }>();
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
+      if (isPublic) {
+        return true;
+      }
       throw new UnauthorizedException('No token provided');
     }
 
     try {
-      // Verify token
       const secret = process.env.JWT_SECRET || 'super-secret-key';
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-      const payload: JwtPayload = await (this.jwtService as any).verifyAsync(
-        token,
-        {
-          secret,
-        },
-      );
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+        secret,
+      });
 
-      if (!payload || typeof payload.userId !== 'number') {
+      if (!payload || !payload.userId) {
         throw new UnauthorizedException('Invalid token payload');
       }
 
-      const userId = payload.userId;
-
-      // Fetch safe subset of user from database (exclude password)
       const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: payload.userId },
         select: {
           id: true,
           email: true,
@@ -63,27 +65,18 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException('User not found');
       }
 
-      // Attach user to request
       request.user = user;
       return true;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        if (error.name === 'TokenExpiredError') {
-          throw new UnauthorizedException('Token expired');
-        }
-        if (error.name === 'JsonWebTokenError') {
-          throw new UnauthorizedException('Invalid token');
-        }
+    } catch {
+      if (isPublic) {
+        return true;
       }
       throw new UnauthorizedException('Authentication failed');
     }
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
-    const authHeader = request.headers.authorization;
-    if (typeof authHeader !== 'string') return undefined;
-
-    const [type, token] = authHeader.split(' ');
+    const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
   }
 }

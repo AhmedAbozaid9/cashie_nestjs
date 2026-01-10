@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  Body,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -9,9 +8,14 @@ import { SignupDto } from './dto/signup.dto';
 import * as bcrypt from 'bcrypt';
 import { sign } from 'jsonwebtoken';
 import { SigninDto } from './dto/signin.dto';
+import { User } from '../generated/prisma/client';
+
+export type UserWithoutPassword = Omit<User, 'password'>;
+
 @Injectable()
 export class AuthService {
   constructor(private readonly prismaService: PrismaService) {}
+
   generateToken = (userId: number, email: string): string => {
     const secret = process.env.JWT_SECRET || 'super-secret-key';
 
@@ -21,6 +25,7 @@ export class AuthService {
 
     return sign({ userId, email }, secret);
   };
+
   async signup(dto: SignupDto) {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     try {
@@ -39,7 +44,6 @@ export class AuthService {
             name: true,
             email: true,
             plan: true,
-            accounts: true,
             createdAt: true,
             updatedAt: true,
           },
@@ -57,6 +61,7 @@ export class AuthService {
       throw error;
     }
   }
+
   async signin(dto: SigninDto) {
     const user = await this.prismaService.user.findUnique({
       where: { email: dto.email },
@@ -69,6 +74,12 @@ export class AuthService {
       throw new BadRequestException('Invalid email or password');
     }
     const token = this.generateToken(user.id, user.email);
-    return { user, token };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _, ...userWithoutPassword } = user;
+    return { user: userWithoutPassword, token };
+  }
+
+  getCurrentUser(user: UserWithoutPassword): UserWithoutPassword {
+    return user;
   }
 }
