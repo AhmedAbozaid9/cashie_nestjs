@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { handlePrismaError } from '../../common/prisma-errors';
 import { Request } from 'express';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator';
@@ -67,7 +68,8 @@ export class JwtAuthGuard implements CanActivate {
 
       request.user = user;
       return true;
-    } catch {
+    } catch (error) {
+      handlePrismaError(error);
       if (isPublic) {
         return true;
       }

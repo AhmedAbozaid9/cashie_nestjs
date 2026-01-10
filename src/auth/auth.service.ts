@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { handlePrismaError } from '../common/prisma-errors';
 import { SignupDto } from './dto/signup.dto';
 import * as bcrypt from 'bcrypt';
 import { sign } from 'jsonwebtoken';
@@ -53,33 +54,56 @@ export class AuthService {
       });
       return result;
     } catch (error: unknown) {
+      handlePrismaError(error);
       console.error(error);
-      const prismaError = error as { code?: string };
-      if (prismaError.code === 'P2002') {
-        throw new BadRequestException('Email already in use');
-      }
       throw error;
     }
   }
 
   async signin(dto: SigninDto) {
-    const user = await this.prismaService.user.findUnique({
-      where: { email: dto.email },
-    });
-    if (!user) {
-      throw new BadRequestException('Invalid email or password');
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { email: dto.email },
+      });
+      if (!user) {
+        throw new BadRequestException('Invalid email or password');
+      }
+      const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+      if (!isPasswordValid) {
+        throw new BadRequestException('Invalid email or password');
+      }
+      const token = this.generateToken(user.id, user.email);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...userWithoutPassword } = user;
+      return { user: userWithoutPassword, token };
+    } catch (error) {
+      handlePrismaError(error);
+      throw error;
     }
-    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-    if (!isPasswordValid) {
-      throw new BadRequestException('Invalid email or password');
-    }
-    const token = this.generateToken(user.id, user.email);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userWithoutPassword } = user;
-    return { user: userWithoutPassword, token };
   }
 
   getCurrentUser(user: UserWithoutPassword): UserWithoutPassword {
     return user;
+  }
+
+  async updateCurrentUser(userId: number, dto: Partial<SignupDto>) {
+    try {
+      return await this.prismaService.user.update({
+        where: { id: userId },
+        data: { ...dto },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          plan: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    } catch (error: unknown) {
+      handlePrismaError(error);
+      console.error(error);
+      throw new InternalServerErrorException('Failed to update user');
+    }
   }
 }

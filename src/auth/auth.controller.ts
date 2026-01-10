@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { UserWithoutPassword } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
@@ -25,5 +25,13 @@ export class AuthController {
   @Get('me')
   getCurrentUser(@GetUser() user: UserWithoutPassword): UserWithoutPassword {
     return this.authService.getCurrentUser(user);
+  }
+
+  @Put('me')
+  updateCurrentUser(
+    @GetUser('id') userId: number,
+    @Body() dto: Partial<SignupDto>,
+  ): Promise<UserWithoutPassword> {
+    return this.authService.updateCurrentUser(userId, dto);
   }
 }
