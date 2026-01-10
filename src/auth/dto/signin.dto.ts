@@ -1,17 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';
-import { Match } from '../../common/decorators/match.decorator';
 
-export class SignupDto {
-  @ApiProperty({
-    description: 'Full name of the user',
-    example: 'Jane Doe',
-    required: true,
-    type: String,
-  })
-  @IsNotEmpty()
-  name: string;
-
+export class SigninDto {
   @ApiProperty({
     description: 'User email address',
     example: 'jane@example.com',
@@ -33,16 +23,4 @@ export class SignupDto {
   @IsNotEmpty()
   @MinLength(8)
   password: string;
-
-  @ApiProperty({
-    description: 'Confirm your password',
-    example: 'correcthorsebatterystaple',
-    minLength: 8,
-    required: true,
-    type: String,
-  })
-  @IsNotEmpty()
-  @MinLength(8)
-  @Match('password', { message: 'Passwords do not match' })
-  password_confirmation: string;
 }

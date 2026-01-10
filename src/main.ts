@@ -22,8 +22,8 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('My Auth API')
-    .setDescription('The signup API description')
+    .setTitle('Cashie app')
+    .setDescription('The API description')
     .setVersion('1.0')
     .addTag('auth')
     .build();
