@@ -4,10 +4,13 @@ import {
   Param,
   ParseIntPipe,
   NotFoundException,
+  Post,
+  Body,
 } from '@nestjs/common';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { UserWithoutPassword } from 'src/auth/auth.service';
 import { AccountService } from './account.service';
+import { CreateAccountDto } from './dto/create-account.dto';
 
 @Controller('account')
 export class AccountController {
@@ -27,5 +30,13 @@ export class AccountController {
       throw new NotFoundException('Account not found or access denied');
     }
     return account;
+  }
+
+  @Post()
+  async createAccount(
+    @GetUser('id') userId: number,
+    @Body() body: CreateAccountDto,
+  ) {
+    return this.accountService.createAccount(userId, body.name, body.amount);
   }
 }

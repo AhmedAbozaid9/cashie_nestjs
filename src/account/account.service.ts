@@ -29,4 +29,10 @@ export class AccountService {
       throw error;
     }
   }
+  async createAccount(userId: number, name: string, amount: number) {
+    const account = await this.prismaService.account.create({
+      data: { userId, name, amount },
+    });
+    return account;
+  }
 }
