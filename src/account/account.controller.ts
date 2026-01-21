@@ -1,4 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  NotFoundException,
+} from '@nestjs/common';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { UserWithoutPassword } from 'src/auth/auth.service';
 import { AccountService } from './account.service';
@@ -11,8 +17,15 @@ export class AccountController {
     return this.accountService.getAccounts(user.id);
   }
 
-  @Get('id')
-  getAccountId(@GetUser('id') id: number) {
-    return { id };
+  @Get(':id')
+  async getAccountId(
+    @GetUser('id') userId: number,
+    @Param('id', ParseIntPipe) accountId: number,
+  ) {
+    const account = await this.accountService.getAccountById(accountId, userId);
+    if (!account) {
+      throw new NotFoundException('Account not found or access denied');
+    }
+    return account;
   }
 }

@@ -17,4 +17,16 @@ export class AccountService {
       throw error;
     }
   }
+  async getAccountById(accountId: number, userId: number) {
+    try {
+      const account = await this.prismaService.account.findFirst({
+        where: { id: accountId, userId },
+      });
+      return account;
+    } catch (error: unknown) {
+      handlePrismaError(error);
+      console.error(error);
+      throw error;
+    }
+  }
 }
