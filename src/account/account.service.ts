@@ -35,4 +35,27 @@ export class AccountService {
     });
     return account;
   }
+
+  async updateAccount(
+    userId: number,
+    accountId: number,
+    updateData: { name?: string; amount?: number },
+  ) {
+    try {
+      const account = await this.prismaService.account.updateMany({
+        where: { id: accountId, userId },
+        data: updateData,
+      });
+      if (account.count === 0) {
+        return null;
+      }
+      return this.prismaService.account.findUnique({
+        where: { id: accountId },
+      });
+    } catch (error: unknown) {
+      handlePrismaError(error);
+      console.error(error);
+      throw error;
+    }
+  }
 }

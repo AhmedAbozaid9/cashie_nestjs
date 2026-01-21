@@ -6,11 +6,12 @@ import {
   NotFoundException,
   Post,
   Body,
+  Put,
 } from '@nestjs/common';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import type { UserWithoutPassword } from 'src/auth/auth.service';
 import { AccountService } from './account.service';
-import { CreateAccountDto } from './dto/create-account.dto';
+import { AccountDto, UpdateAccountDto } from './dto/account.dto';
 
 @Controller('account')
 export class AccountController {
@@ -33,10 +34,24 @@ export class AccountController {
   }
 
   @Post()
-  async createAccount(
-    @GetUser('id') userId: number,
-    @Body() body: CreateAccountDto,
-  ) {
+  async createAccount(@GetUser('id') userId: number, @Body() body: AccountDto) {
     return this.accountService.createAccount(userId, body.name, body.amount);
+  }
+
+  @Put(':id')
+  async updateAccount(
+    @GetUser('id') userId: number,
+    @Param('id', ParseIntPipe) accountId: number,
+    @Body() body: UpdateAccountDto,
+  ) {
+    const account = await this.accountService.updateAccount(
+      userId,
+      accountId,
+      body,
+    );
+    if (!account) {
+      throw new NotFoundException('Account not found or access denied');
+    }
+    return { ...account, ...body };
   }
 }
