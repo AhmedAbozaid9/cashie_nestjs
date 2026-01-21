@@ -61,25 +61,20 @@ export class AuthService {
   }
 
   async signin(dto: SigninDto) {
-    try {
-      const user = await this.prismaService.user.findUnique({
-        where: { email: dto.email },
-      });
-      if (!user) {
-        throw new BadRequestException('Invalid email or password');
-      }
-      const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-      if (!isPasswordValid) {
-        throw new BadRequestException('Invalid email or password');
-      }
-      const token = this.generateToken(user.id, user.email);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password: _, ...userWithoutPassword } = user;
-      return { user: userWithoutPassword, token };
-    } catch (error) {
-      handlePrismaError(error);
-      throw error;
+    const user = await this.prismaService.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (!user) {
+      throw new BadRequestException('Invalid email or password');
     }
+    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Invalid email or password');
+    }
+    const token = this.generateToken(user.id, user.email);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _, ...userWithoutPassword } = user;
+    return { user: userWithoutPassword, token };
   }
 
   getCurrentUser(user: UserWithoutPassword): UserWithoutPassword {
